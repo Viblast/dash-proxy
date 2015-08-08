@@ -42,6 +42,13 @@ formatter = Formatter()
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
+def baseUrl(url):
+	idx = url.rfind('/')
+	if idx >= 0:
+		return url[:idx+1]
+	else:
+		return url
+
 class RepAddr(object):
 	def __init__(self, period_idx, adaptation_set_idx, representation_idx):
 		self.period_idx = period_idx
@@ -60,10 +67,10 @@ class MpdLocator(object):
 		return self.adaptation_set(rep_addr).findall('mpd:Representation', ns)[rep_addr.representation_idx]
 	
 	def segment_template(self, rep_addr):
-		return self.adaptation_set(rep_addr).findall('mpd:SegmentTemplate', ns)[0]
+		return self.representation(rep_addr).find('mpd:SegmentTemplate', ns) or self.adaptation_set(rep_addr).find('mpd:SegmentTemplate', ns)
 		
 	def segment_timeline(self, rep_addr):
-		return self.segment_template(rep_addr).findall('mpd:SegmentTimeline', ns)[0]
+		return self.segment_template(rep_addr).find('mpd:SegmentTimeline', ns)
 	
 	def adaptation_set(self, rep_addr):
 		return self.mpd.findall('mpd:Period', ns)[rep_addr.period_idx].findall('mpd:AdaptationSet', ns)[rep_addr.adaptation_set_idx]
@@ -113,7 +120,20 @@ class DashProxy(HasLogger):
 		mpd = xml.etree.ElementTree.fromstring(r.text)
 		self.handle_mpd(mpd)
 		
+	def fill_base_url(self, mpd):
+		mpd.baseUrl = baseUrl(self.mpd)
+		location = mpd.find('mpd:Location', ns)
+		if location:
+			mpd.baseUrl = baseUrl(location.text)
+		baseUrlNode = mpd.find('mpd:BaseUrl', ns)
+		if baseUrlNode:
+			if baseUrlNode.text.startswith('http://') or baseUrlNode.text.startswith('https://'):
+				mpd.baseUrl = baseUrl(baseUrlNode.text)
+			else:
+				mpd.baseUrl = mpd.baseUrl + baseUrlNode.text
+		
 	def handle_mpd(self, mpd):
+		self.fill_base_url(mpd)
 		original_mpd = copy.deepcopy(mpd)
 		
 		periods = mpd.findall('mpd:Period', ns)
@@ -221,7 +241,7 @@ class DashDownloader(HasLogger):
 		return template
 		
 	def full_url(self, dest):
-		return 'http://live.unified-streaming.com/loop/loop.isml/' + dest # TODO remove hardcoded arrd
+		return self.mpd.mpd.baseUrl + dest # TODO remove hardcoded arrd
 		
 	def write(self, dest, content):
 		dest = dest[0:dest.rfind('?')]
