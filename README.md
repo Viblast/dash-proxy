@@ -22,8 +22,7 @@ This will behave just as the above command except that old content will not be d
 The VoD stream will be downloaded in the output directory (`-o`). In this case the download (`-d`) parameter is effectively ignored. In this example it is provided for clarity.
 
 ## Supported features
- * Segment list
- * Manifests that reference whole .mp4 files and don't contain additional info
+ * Segment Timeline
 
 ## Dependencies
  * [Requests](http://docs.python-requests.org/en/latest/)
