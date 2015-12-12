@@ -3,6 +3,11 @@ dash proxy is a tool that allows for easy downloading or mirroring of remote MPE
 
 ## How to use
 
+### Install dependencies
+```shell
+pip install -r requirements.txt
+```
+
 ### Mirroring a remote live stream
 ```shell
 ./dashproxy.py http://server.com/Manifest.mpd -o .
@@ -23,9 +28,6 @@ The VoD stream will be downloaded in the output directory (`-o`). In this case t
 
 ## Supported features
  * Segment Timeline
-
-## Dependencies
- * [Requests](http://docs.python-requests.org/en/latest/)
 
 ## License
 MIT
