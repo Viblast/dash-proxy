@@ -29,6 +29,10 @@ The VoD stream will be downloaded in the output directory (`-o`). In this case t
 ## Supported features
  * Segment Timeline
 
+## Python compatibility
+ * 3.4 (recommended)
+ * 2.7
+
 ## License
 MIT
 

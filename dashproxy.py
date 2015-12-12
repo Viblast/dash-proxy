@@ -11,7 +11,7 @@ import copy
 
 from termcolor import colored
 
-logging.VERBOSE = (logging.INFO + logging.DEBUG)/2
+logging.VERBOSE = (logging.INFO + logging.DEBUG) // 2
 
 logger = logging.getLogger('dash-proxy')
 
@@ -67,7 +67,11 @@ class MpdLocator(object):
         return self.adaptation_set(rep_addr).findall('mpd:Representation', ns)[rep_addr.representation_idx]
 
     def segment_template(self, rep_addr):
-        return self.representation(rep_addr).find('mpd:SegmentTemplate', ns) or self.adaptation_set(rep_addr).find('mpd:SegmentTemplate', ns)
+        rep_st = self.representation(rep_addr).find('mpd:SegmentTemplate', ns)
+        if rep_st is not None:
+            return rep_st
+        else:
+            return self.adaptation_set(rep_addr).find('mpd:SegmentTemplate', ns)
 
     def segment_timeline(self, rep_addr):
         return self.segment_template(rep_addr).find('mpd:SegmentTimeline', ns)
@@ -121,20 +125,20 @@ class DashProxy(HasLogger):
         mpd = xml.etree.ElementTree.fromstring(r.text)
         self.handle_mpd(mpd)
 
-    def fill_base_url(self, mpd):
-        mpd.baseUrl = baseUrl(self.mpd)
+    def get_base_url(self, mpd):
+        base_url = baseUrl(self.mpd)
         location = mpd.find('mpd:Location', ns)
-        if location:
-            mpd.baseUrl = baseUrl(location.text)
+        if location is not None:
+            base_url = baseUrl(location.text)
         baseUrlNode = mpd.find('mpd:BaseUrl', ns)
         if baseUrlNode:
             if baseUrlNode.text.startswith('http://') or baseUrlNode.text.startswith('https://'):
-                mpd.baseUrl = baseUrl(baseUrlNode.text)
+                base_url = baseUrl(baseUrlNode.text)
             else:
-                mpd.baseUrl = mpd.baseUrl + baseUrlNode.text
+                base_url = base_url + baseUrlNode.text
+        return base_url
 
     def handle_mpd(self, mpd):
-        self.fill_base_url(mpd)
         original_mpd = copy.deepcopy(mpd)
 
         periods = mpd.findall('mpd:Period', ns)
@@ -163,13 +167,13 @@ class DashProxy(HasLogger):
             self.info('Starting a downloader for %s' % (rep_addr,))
             downloader = DashDownloader(self, rep_addr)
             self.downloaders[rep_addr] = downloader
-            downloader.handle_mpd(mpd)
+            downloader.handle_mpd(mpd, self.get_base_url(mpd))
 
     def write_output_mpd(self, mpd):
         self.info('Writing the update MPD file')
-        content = xml.etree.ElementTree.tostring(mpd)
+        content = xml.etree.ElementTree.tostring(mpd, encoding="utf-8").decode("utf-8")
         dest = os.path.join(self.output_dir, 'manifest.mpd')
-        f = open(dest, 'w')
+        f = open(dest, 'wt')
         f.write(content)
         f.close()
 
@@ -179,10 +183,12 @@ class DashDownloader(HasLogger):
         self.logger = logger
         self.proxy = proxy
         self.rep_addr = rep_addr
+        self.mpd_base_url = ''
 
         self.initialization_downloaded = False
 
-    def handle_mpd(self, mpd):
+    def handle_mpd(self, mpd, base_url):
+        self.mpd_base_url = base_url
         self.mpd = MpdLocator(mpd)
 
         rep = self.mpd.representation(self.rep_addr)
@@ -242,12 +248,12 @@ class DashDownloader(HasLogger):
         return template
 
     def full_url(self, dest):
-        return self.mpd.mpd.baseUrl + dest # TODO remove hardcoded arrd
+        return self.mpd_base_url + dest # TODO remove hardcoded arrd
 
     def write(self, dest, content):
         dest = dest[0:dest.rfind('?')]
         dest = os.path.join(self.proxy.output_dir, dest)
-        f = open(dest, 'w')
+        f = open(dest, 'wb')
         f.write(content)
         f.close()
 
