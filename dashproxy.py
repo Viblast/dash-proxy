@@ -99,12 +99,14 @@ class HasLogger(object):
 class DashProxy(HasLogger):
     retry_interval = 10
 
-    def __init__(self, mpd, output_dir, download):
+    def __init__(self, mpd, output_dir, download, save_mpds=False):
         self.logger = logger
 
         self.mpd = mpd
         self.output_dir = output_dir
         self.download = download
+        self.save_mpds = save_mpds
+        self.i_refresh = 0
 
         self.downloaders = {}
 
@@ -113,6 +115,7 @@ class DashProxy(HasLogger):
         self.refresh_mpd()
 
     def refresh_mpd(self, after=0):
+        self.i_refresh += 1
         if after>0:
             time.sleep(after)
 
@@ -173,9 +176,14 @@ class DashProxy(HasLogger):
         self.info('Writing the update MPD file')
         content = xml.etree.ElementTree.tostring(mpd, encoding="utf-8").decode("utf-8")
         dest = os.path.join(self.output_dir, 'manifest.mpd')
-        f = open(dest, 'wt')
-        f.write(content)
-        f.close()
+
+        with open(dest, 'wt') as f:
+            f.write(content)
+
+        if self.save_mpds:
+            dest = os.path.join(self.output_dir, 'manifest.{}.mpd'.format(self.i_refresh))
+            with open(dest, 'wt') as f:
+                f.write(content)
 
 
 class DashDownloader(HasLogger):
@@ -261,8 +269,9 @@ class DashDownloader(HasLogger):
 def run(args):
     logger.setLevel(logging.VERBOSE if args.v else logging.INFO)
     proxy = DashProxy(mpd=args.mpd,
-              output_dir=args.o,
-                  download=args.d)
+                  output_dir=args.o,
+                  download=args.d,
+                  save_mpds=args.save_individual_mpds)
     return proxy.run()
 
 def main():
@@ -270,7 +279,8 @@ def main():
     parser.add_argument("mpd")
     parser.add_argument("-v", action="store_true")
     parser.add_argument("-d", action="store_true")
-    parser.add_argument("-o", default='.');
+    parser.add_argument("-o", default='.')
+    parser.add_argument("--save-individual-mpds", action="store_true")
     args = parser.parse_args()
 
     run(args)
