@@ -221,7 +221,7 @@ class DashDownloader(HasLogger):
                 idx = idx + 1
 
         media_template = segment_template.attrib.get('media', '')
-        nex_time = 0
+        next_time = 0
         for segment in segment_timeline.findall('mpd:S', ns):
             current_time = int(segment.attrib.get('t', '-1'))
             if current_time == -1:
