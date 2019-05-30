@@ -245,10 +245,12 @@ class DashDownloader(HasLogger):
     def render_template(self, template, representation=None, segment=None):
         template = template.replace('$RepresentationID$', '{representation_id}')
         template = template.replace('$Time$', '{time}')
+        template = template.replace('$Bandwidth$', '{bandwidth}')
 
         args = {}
         if representation is not None:
             args['representation_id'] = representation.attrib.get('id', '')
+            args['bandwidth'] = representation.attrib.get('bandwidth', '')
         if segment is not None:
             args['time'] = segment.attrib.get('t', '')
 
