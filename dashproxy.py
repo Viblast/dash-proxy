@@ -261,6 +261,7 @@ class DashDownloader(HasLogger):
     def write(self, dest, content):
         dest = dest[0:dest.rfind('?')]
         dest = os.path.join(self.proxy.output_dir, dest)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
         f = open(dest, 'wb')
         f.write(content)
         f.close()
