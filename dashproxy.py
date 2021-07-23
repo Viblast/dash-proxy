@@ -259,8 +259,9 @@ class DashDownloader(HasLogger):
         return self.mpd_base_url + dest # TODO remove hardcoded arrd
 
     def write(self, dest, content):
-        dest = dest[0:dest.rfind('?')]
+        dest = dest.split('?')[0]
         dest = os.path.join(self.proxy.output_dir, dest)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
         f = open(dest, 'wb')
         f.write(content)
         f.close()
